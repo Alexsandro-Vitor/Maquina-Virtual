@@ -11,26 +11,25 @@ function onOpen(e) {
   spreadSheet.addMenu("Programa", menuItems);
 }
 
-//Celulas da m·quina virtual
+//Celulas da m√°quina virtual
 //ip: Instruction Pointer
-//memoria: Todas as 100 cÈlulas da memÛria da m·qiuna virtual
-//regErro: O registrador que contÈm o valor de erro (0 se n „o ocorreu nenhum erro)
-//registradores: Todos os registradores da m·quina virtual
-var ip = SpreadsheetApp.getActive().getActiveSheet().getRange(2, 7, 1, 1);
-var memoria = SpreadsheetApp.getActive().getActiveSheet().getRange(4, 1, 10, 10);
+//memoria: Todas as 100 c√©lulas da mem√≥ria da m√°qiuna virtual
+//regErro: O registrador que cont√©m o valor de erro (0 se n √£o ocorreu nenhum erro)
+//registradores: Todos os registradores da m√°quina virtual
+var ip = SpreadsheetApp.getActiveSheet().getRange(2, 7, 1, 1);
+var sp = SpreadsheetApp.getActiveSheet().getRange(2, 8, 1, 1);
+var memoria = SpreadsheetApp.getActiveSheet().getRange(4, 1, 10, 10);
 var out = SpreadsheetApp.getActive().getActiveSheet().getRange(2, 9, 1, 1);
-var regErro = SpreadsheetApp.getActive().getActiveSheet().getRange(2, 10, 1, 1);
-var registradores = SpreadsheetApp.getActive().getActiveSheet().getRange(2, 1, 1, 10);
+var regErro = SpreadsheetApp.getActiveSheet().getRange(2, 10, 1, 1);
+var registradores = SpreadsheetApp.getActiveSheet().getRange(2, 1, 1, 10);
 
-//Executa o cÛdigo
+//Executa o c√≥digo
 function run() {
   var spreadSheet = SpreadsheetApp.getActive();
   var sheet = spreadSheet.getActiveSheet();
   do {
     var instAddress = ip.getValue();
-    var lin = Math.floor(instAddress / 10) + 4;
-    var col = (instAddress % 10) + 1;
-    var range = sheet.getRange(lin, col, 1, 1);
+    var range = acessaMem(instAddress);
     mudarFundo(range, "#dddddd");
     var instrucao = range.getValue();
     if (comando(sheet, instrucao)) {
@@ -43,29 +42,45 @@ function run() {
   } while (instrucao != "halt");
 }
 
-//Muda a cor de fundo de uma celula ou conjunto de cÈlulas
+function acessaMem(endereco) {
+  return SpreadsheetApp.getActiveSheet().getRange(linhaMem(endereco), colunaMem(endereco), 1, 1);
+}
+
+function linhaMem(endereco) {
+  return Math.floor((endereco % 100) / 10) + 4;
+}
+
+function colunaMem(endereco) {
+  return (endereco % 10) + 1;
+}
+
+//Muda a cor de fundo de uma celula ou conjunto de c√©lulas
 function mudarFundo(range, fundo) {
   range.setBackground(fundo);
   while (range.getBackground() != fundo) {}
 }
 
-//Checa qual È o comando e o executa
+//Checa qual √© o comando e o executa
 function comando(sheet, instrucao) {
   var instrucoes = instrucao.split(" ");
   
-  //InstruÁıes de operaÁıes aritmÈticas
+  //Instru√ß√µes de opera√ß√µes aritm√©ticas
   if (instrucoes[0] == "add") insere(sheet, instrucoes[1], valor(sheet, instrucoes[2]) + valor(sheet, instrucoes[3]));
   else if (instrucoes[0] == "sub") insere(sheet, instrucoes[1], valor(sheet, instrucoes[2]) - valor(sheet, instrucoes[3]));
   else if (instrucoes[0] == "mult") insere(sheet, instrucoes[1], valor(sheet, instrucoes[2]) * valor(sheet, instrucoes[3]));
   else if (instrucoes[0] == "div") insere(sheet, instrucoes[1], Math.floor(valor(sheet, instrucoes[2]) / valor(sheet, instrucoes[3])));
   else if (instrucoes[0] == "mod") insere(sheet, instrucoes[1], valor(sheet, instrucoes[2]) % valor(sheet, instrucoes[3]));
   
-  //OperaÁıes baixo nÌvel (slides)
+  //Opera√ß√µes baixo n√≠vel (slides)
   else if (instrucoes[0] == "sll") insere(sheet, instrucoes[1], slideLeft(valor(sheet, instrucoes[2]), valor(sheet, instrucoes[3])));
   else if (instrucoes[0] == "slr") insere(sheet, instrucoes[1], slideRight(valor(sheet, instrucoes[2]), valor(sheet, instrucoes[3])));
   
-  //AtribuiÁ„o de valor a um registrador
+  //Atribui√ß√£o de valor a um registrador
   else if (instrucoes[0] == "atr") insere(sheet, instrucoes[1], valor(sheet, instrucoes[2]));
+  
+  //Instrucoes de mem√≥ria
+  else if (instrucoes[0] == "ld") insere(sheet, instrucoes[1], acessaMem(valor(sheet, instrucoes[2])).getValue());
+  else if (instrucoes[0] == "st") store(acessaMem(valor(sheet, instrucoes[1])), valor(sheet, instrucoes[2]));
     
   //Jump e Branches
   else if (instrucoes[0] == "jump") jump(sheet, instrucoes[1]);
@@ -79,13 +94,17 @@ function comando(sheet, instrucao) {
   //Saida do programa
   else if (instrucoes[0] == "out") out.setValue(valor(sheet, instrucoes[1]));
   
-  //Casos que sempre retornam um valor para erro, seja de sucesso ou n„o
+  //Casos que sempre retornam um valor para erro, seja de sucesso ou n√£o
   else if (instrucao == "halt") erro(0);
   else if (instrucao != "") erro("notIns");
   
   //Se surgiu algum erro
   if (regErro.getValue() != 0) return false;
   return true;
+}
+
+function store(memoria, valor) {
+  memoria.setValue(valor);
 }
 
 //Salta para o endereco especificado
@@ -98,7 +117,7 @@ function erro(msg) {
   regErro.setValue(msg);
 }
 
-//Vari·veis usadas para checar se as entradas contÈm registradores ou valores v·lidos
+//Vari√°veis usadas para checar se as entradas cont√©m registradores ou valores v√°lidos
 zero = "0".charCodeAt(0);
 sete = "7".charCodeAt(0);
 nove = "9".charCodeAt(0);
@@ -108,25 +127,29 @@ function insere(sheet, local, valor) {
   if (registrador(local)) {
     var reg = Number(local.charCodeAt(1) - zero);
     sheet.getRange(2, reg, 1, 1).setValue(valor);
+  } else if (local == "sp") {
+    sp.setValue(valor);
   } else {
     erro("notReg");
   }
 }
 
-//Pega um valor de um registrador ou de um n˙mero
+//Pega um valor de um registrador ou de um n√∫mero
 function valor(sheet, entrada) {
   var valor = entrada.toString();
   if (numero(valor)) {
     return Number(valor);
   } else if (registrador(valor)) {
     return Number(sheet.getRange(2, Number(valor.charAt(1))).getValue());
+  } else if (valor == "sp") {
+    return Number(sp.getValue());
   } else {
-    erro("prmErr");
+    erro("notVal");
     return 0;
   }
 }
 
-//Checa se uma string È um n˙mero
+//Checa se uma string √© um n√∫mero
 function numero(valor) {
   var i;
   for (i = 0; i < valor.length; i++) {
@@ -146,12 +169,12 @@ function registrador(valor) {
 
 function memoria(valor) {}
 
-//Aplica o operador << a um n˙mero
+//Aplica o operador << a um n√∫mero
 function slideLeft(a, b) {
   Math.floor(a * Math.pow(2, b));
 }
 
-//Aplica o operador >> a um n˙mero
+//Aplica o operador >> a um n√∫mero
 function slideRight(a, b) {
   Math.floor(a / Math.pow(2, b));
 }
@@ -159,4 +182,5 @@ function slideRight(a, b) {
 //Zera todos os registradores
 function reset() {
   registradores.setValue(0);
+  sp.setValue(99);
 }
